@@ -167,6 +167,7 @@ export default function Page() {
         <div className="absolute bottom-10 right-10 z-20 flex gap-4">
           {heroAssets.map((_, idx) => (
             <button
+            
               key={idx}
               onClick={() => setCurrentIndex(idx)}
               className={`transition-all duration-500 overflow-hidden ${

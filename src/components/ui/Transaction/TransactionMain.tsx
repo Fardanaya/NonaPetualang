@@ -1199,14 +1199,23 @@ const Transaction = ({ type }: { type: "admin" | "user" }) => {
                 </div>
 
                 <p className="font-semibold text-sm md:text-medium">
-                  {model.address?.label || "-"}
+                  {model.address?.label || (model.address_id ? "-" : "Ambil Sendiri (Pickup)")}
                 </p>
-                <div className="text-[0.6rem] md:text-xs">
-                  <p className="font-semibold">{model.address?.address}</p>
-                  <p className="font-medium">
-                    {model.address?.address_details}
-                  </p>
-                </div>
+                {model.address ? (
+                  <div className="text-[0.6rem] md:text-xs">
+                    <p className="font-semibold">{model.address?.address}</p>
+                    <p className="font-medium">
+                      {model.address?.address_details}
+                    </p>
+                  </div>
+                ) : (
+                  !model.address_id && (
+                    <div className="text-[0.6rem] md:text-xs text-default-500">
+                      <p className="font-semibold">Gudang Utama Nona Petualang</p>
+                      <p className="font-medium">Jl. Veteran No. 123, Pasir Kaliki, Bandung</p>
+                    </div>
+                  )
+                )}
               </div>
             )}
           </Section>

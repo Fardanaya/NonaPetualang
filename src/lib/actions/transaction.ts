@@ -308,27 +308,28 @@ export const getBookedDatesForCatalogItems = async (catalogIds: string[]) => {
   const bookedStatuses = ['pending', 'waiting', 'dp', 'paid', 'sending', 'returning', 'settlement'];
 
   const { data, error } = await supabase
-    .from("transactions")
+    .from("transaction_items")
     .select(`
-          id,
-          start_rent,
-          end_rent,
-          status,
-          transaction_items!inner (
-              item_id,
-              item_type
+          item_id,
+          item_type,
+          transaction:transaction_id (
+              id,
+              start_rent,
+              end_rent,
+              status
           )
       `)
-    .in('status', bookedStatuses)
-    .filter('transaction_items.item_id', 'in', `(${catalogIds.join(',')})`)
-    .filter('transaction_items.item_type', 'eq', 'catalog');
+    .eq('item_type', 'catalog')
+    .in('item_id', catalogIds);
 
   if (error) {
     console.error('Error fetching booked dates:', error);
     return [];
   }
 
-  return data || [];
+  return data
+    ?.map((item: any) => item.transaction)
+    .filter((t: any) => t && bookedStatuses.includes(t.status)) || [];
 };
 
 export const getBookedDatesForAccessoryItems = async (accessoryIds: string[]) => {
@@ -339,25 +340,26 @@ export const getBookedDatesForAccessoryItems = async (accessoryIds: string[]) =>
   const bookedStatuses = ['pending', 'waiting', 'dp', 'paid', 'sending', 'returning', 'settlement'];
 
   const { data, error } = await supabase
-    .from("transactions")
+    .from("transaction_items")
     .select(`
-          id,
-          start_rent,
-          end_rent,
-          status,
-          transaction_items!inner (
-              item_id,
-              item_type
+          item_id,
+          item_type,
+          transaction:transaction_id (
+              id,
+              start_rent,
+              end_rent,
+              status
           )
       `)
-    .in('status', bookedStatuses)
-    .filter('transaction_items.item_id', 'in', `(${accessoryIds.join(',')})`)
-    .filter('transaction_items.item_type', 'eq', 'accessory');
+    .eq('item_type', 'accessory')
+    .in('item_id', accessoryIds);
 
   if (error) {
     console.error('Error fetching booked dates for accessories:', error);
     return [];
   }
 
-  return data || [];
+  return data
+    ?.map((item: any) => item.transaction)
+    .filter((t: any) => t && bookedStatuses.includes(t.status)) || [];
 };

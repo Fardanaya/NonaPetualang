@@ -47,7 +47,7 @@ export function useUserCart() {
                 const { data } = await supabase
                     .from("catalog")
                     .select(`
-                        id, name, price, additional_day_price, images, slug, size, max_size, gender,
+                        id, name, price_per_day, prices, images, slug,
                         brand:brand_id(*),
                         category:category_id(*)
                     `)

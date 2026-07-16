@@ -41,8 +41,9 @@ import {
   FaTent,
   FaTrash,
   FaPlus,
+  FaWarehouse,
 } from "react-icons/fa6";
-import { FaCalendarAlt, FaMapMarkerAlt, FaSearch } from "react-icons/fa";
+import { FaCalendarAlt, FaMapMarkerAlt, FaSearch, FaShippingFast } from "react-icons/fa";
 import { IoTicket } from "react-icons/io5";
 import { LuMapPin } from "react-icons/lu";
 import { createOrUpdateTransaction as createTransaction } from "@/lib/actions/transaction";
@@ -146,6 +147,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
     additional_day: 0,
   });
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [shippingMethod, setShippingMethod] = useState<"delivery" | "pickup">("delivery");
   const [addresses, setAddresses] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -636,7 +638,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
       return;
     }
 
-    if (!selectedAddressId) {
+    if (shippingMethod === "delivery" && !selectedAddressId) {
       displayToast({
         type: "danger",
         title: "Error",
@@ -657,12 +659,11 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
       // Create transaction
       const transactionData = {
         user_id: user.id,
-        address_id: selectedAddressId,
+        address_id: shippingMethod === "delivery" ? selectedAddressId : null,
         vouchers_id: discount?.id || null,
         status: "pending",
         start_rent: dateRange.start_rent.toISOString(),
         end_rent: dateRange.end_rent.toISOString(),
-        additional_day: dateRange.additional_day,
         total_price: getTotal(),
         final_price: getTotal(),
       };
@@ -842,7 +843,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
 
   return (
     <div className="py-4 px-4 md:px-8 lg:px-16 max-w-5xl mx-auto flex flex-col gap-3">
-      {/* User Info Section */}
+      {/* User Info & Shipping Section */}
       <Section className="px-4 py-4 flex flex-col gap-4">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 text-sm font-semibold">
@@ -859,86 +860,138 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
           </div>
         </div>
 
-        {/* Address Section */}
+        {/* Shipping Method Section */}
         <div className="flex flex-col gap-3 pt-3 border-t border-default-100">
           <div className="flex items-center gap-2 text-sm font-semibold">
-            <FaMapMarkerAlt className="text-primary" />
-            <p>Alamat Pengiriman</p>
+            <FaShippingFast className="text-primary" />
+            <p>Metode Pengiriman</p>
           </div>
-          {addresses.length === 0 ? (
+          <div className="flex gap-4 pl-6">
             <Button
-              onPress={() => {
-                reset(defaultAddress);
-                onAddressOpen();
-              }}
-              aria-label="Tambah Alamat"
-              variant="flat"
-              color="primary"
+              className={`flex-1 font-semibold text-xs md:text-sm h-9 md:h-10 rounded-lg transition-all ${shippingMethod === "delivery" ? "bg-primary text-white shadow-sm" : "bg-default-100 text-default-600 hover:bg-default-200"}`}
+              onPress={() => setShippingMethod("delivery")}
             >
-              <FaPlus /> Tambah Alamat
+              Diantar ke Alamat
             </Button>
-          ) : (
-            <Accordion>
-              <AccordionItem
-                classNames={{ trigger: "py-0" }}
-                key="address"
-                aria-label="Address"
-                indicator={<FaAngleRight className="text-primary" />}
-                title={
-                  <p className="font-semibold text-sm md:text-medium">
-                    {addresses.find(a => a.id === selectedAddressId)?.label || "-"}
-                  </p>
-                }
-                subtitle={
-                  <div className="text-[0.6rem] md:text-xs">
-                    <p className="font-semibold">
-                      {addresses.find(a => a.id === selectedAddressId)?.address}
-                    </p>
-                    <p className="font-medium">
-                      {addresses.find(a => a.id === selectedAddressId)?.address_details}
-                    </p>
-                  </div>
-                }
-              >
-                <RadioGroup
-                  isRequired
-                  value={selectedAddressId}
-                  onValueChange={(value) => setSelectedAddressId(value)}
-                >
-                  {addresses.map((address) => (
-                    <AddressRadio
-                      description={
-                        <div className="text-[0.6rem] md:text-xs">
-                          <p className="font-semibold">
-                            {address.address}
-                          </p>
-                          <p className="font-medium">
-                            {address.address_details}
-                          </p>
-                        </div>
-                      }
-                      value={address.id}
-                      key={address.id}
-                    >
-                      {address.label}
-                    </AddressRadio>
-                  ))}
-                </RadioGroup>
+            <Button
+              className={`flex-1 font-semibold text-xs md:text-sm h-9 md:h-10 rounded-lg transition-all ${shippingMethod === "pickup" ? "bg-primary text-white shadow-sm" : "bg-default-100 text-default-600 hover:bg-default-200"}`}
+              onPress={() => setShippingMethod("pickup")}
+            >
+              Ambil Sendiri (Pickup)
+            </Button>
+          </div>
+        </div>
+
+        {/* Conditional Address or Pickup Location Section */}
+        <div className="flex flex-col gap-3 pt-3 border-t border-default-100">
+          {shippingMethod === "delivery" ? (
+            <>
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <FaMapMarkerAlt className="text-primary" />
+                <p>Alamat Pengiriman</p>
+              </div>
+              {addresses.length === 0 ? (
                 <Button
-                  className="mt-3"
-                  fullWidth
-                  variant="flat"
-                  color="primary"
-                  startContent={<LuMapPin size={16} />}
                   onPress={() => {
                     reset(defaultAddress);
                     onAddressOpen();
                   }}
+                  aria-label="Tambah Alamat"
+                  variant="flat"
+                  color="primary"
+                  className="ml-6"
                 >
-                  Tambah Alamat Baru
+                  <FaPlus /> Tambah Alamat
                 </Button>
-              </AccordionItem>
-            </Accordion>
+              ) : (
+                <div className="pl-6">
+                  <Accordion>
+                    <AccordionItem
+                      classNames={{ trigger: "py-0" }}
+                      key="address"
+                      aria-label="Address"
+                      indicator={<FaAngleRight className="text-primary" />}
+                      title={
+                        <p className="font-semibold text-sm md:text-medium">
+                          {addresses.find(a => a.id === selectedAddressId)?.label || "Pilih Alamat Pengiriman"}
+                        </p>
+                      }
+                      subtitle={
+                        selectedAddressId ? (
+                          <div className="text-[0.6rem] md:text-xs">
+                            <p className="font-semibold">
+                              {addresses.find(a => a.id === selectedAddressId)?.address}
+                            </p>
+                            <p className="font-medium">
+                              {addresses.find(a => a.id === selectedAddressId)?.address_details}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-danger font-medium">Alamat belum dipilih</p>
+                        )
+                      }
+                    >
+                      <RadioGroup
+                        isRequired
+                        value={selectedAddressId}
+                        onValueChange={(value) => setSelectedAddressId(value)}
+                      >
+                        {addresses.map((address) => (
+                          <AddressRadio
+                            description={
+                              <div className="text-[0.6rem] md:text-xs">
+                                <p className="font-semibold">
+                                  {address.address}
+                                </p>
+                                <p className="font-medium">
+                                  {address.address_details}
+                                </p>
+                              </div>
+                            }
+                            value={address.id}
+                            key={address.id}
+                          >
+                            {address.label}
+                          </AddressRadio>
+                        ))}
+                      </RadioGroup>
+                      <Button
+                        className="mt-3"
+                        fullWidth
+                        variant="flat"
+                        color="primary"
+                        startContent={<LuMapPin size={16} />}
+                        onPress={() => {
+                          reset(defaultAddress);
+                          onAddressOpen();
+                        }}
+                      >
+                        Tambah Alamat Baru
+                      </Button>
+                    </AccordionItem>
+                  </Accordion>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <FaWarehouse className="text-primary" />
+                <p>Lokasi Pengambilan (Pickup)</p>
+              </div>
+              <div className="pl-6 flex flex-col gap-1.5">
+                <p className="font-semibold text-sm text-default-800">Gudang Utama Nona Petualang</p>
+                <p className="text-xs text-default-600 leading-relaxed">
+                  Jl. Veteran No. 123, Pasir Kaliki, Kec. Cicendo, Kota Bandung, Jawa Barat 40171
+                </p>
+                <p className="text-xs text-default-500 font-medium">
+                  Jam Operasional: Senin - Minggu (08.00 - 20.00 WIB)
+                </p>
+                <div className="text-[10px] md:text-xs text-warning-700 bg-warning-50 border border-warning-100 rounded-lg p-2.5 mt-1 font-medium leading-relaxed">
+                  <strong>Penting:</strong> Silakan ambil barang sewa Anda tepat waktu setelah status pesanan Anda dikonfirmasi oleh Admin. Bawa kartu identitas (KTP/SIM) asli saat pengambilan di gudang.
+                </div>
+              </div>
+            </>
           )}
         </div>
       </Section>
@@ -964,7 +1017,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
 
             return (
               <div key={item.id} className="flex flex-col gap-2">
-                <CartItem item={item} showRemoveButton={false} />
+                <CartItem item={item} showRemoveButton={false} overrideRentalDays={getRentDays()} />
 
                 {/* Accessories for this catalog item */}
                 {itemAccessories.length > 0 && (
@@ -1193,11 +1246,68 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
           <p>Rincian Pembayaran</p>
         </div>
         <div className="flex flex-col gap-1">
-          <div className="flex flex-col text-default-800">
+          <div className="flex flex-col text-default-800 gap-2">
             {getSubtotalItems() > 0 && (
-              <div className="flex flex-row justify-between text-sm md:text-medium">
-                <p>Subtotal Items</p>
-                <p>Rp {getSubtotalItems().toLocaleString("id-ID")}</p>
+              <div className="flex flex-col">
+                <div className="flex flex-row justify-between text-sm md:text-medium font-medium">
+                  <p>Subtotal Items</p>
+                  <p>Rp {getSubtotalItems().toLocaleString("id-ID")}</p>
+                </div>
+                <div className="pl-3 mt-1 space-y-1.5 border-l-2 border-primary/20">
+                  {checkoutItems.map((item) => {
+                    const days = getRentDays();
+                    let itemPrice = 0;
+                    let breakdownText = "";
+                    const itemData = item.catalog || item.accessory;
+                    const itemName = itemData?.name || "";
+
+                    if (item.item_type === 'catalog' && item.catalog) {
+                       const pricePerDay = item.catalog.price_per_day || 0;
+                       const packages = item.catalog.prices;
+                       
+                       itemPrice = calcRentalPrice(pricePerDay, packages, days);
+
+                       if (packages && packages.length > 0) {
+                         const sorted = [...packages].sort((a, b) => a.days - b.days);
+                         let bestPkg: { days: number; price: number } | null = null;
+                         for (const pkg of sorted) {
+                           if (pkg.days <= days) {
+                             bestPkg = pkg;
+                           }
+                         }
+
+                         if (bestPkg) {
+                           const extraDays = days - bestPkg.days;
+                           const pkgPrice = bestPkg.price;
+                           const extraPrice = extraDays * pricePerDay;
+                           if (extraDays > 0) {
+                             breakdownText = `Paket ${bestPkg.days} Hari (Rp ${pkgPrice.toLocaleString("id-ID")}) + ${extraDays} Hari Tambahan (Rp ${extraPrice.toLocaleString("id-ID")})`;
+                           } else {
+                             breakdownText = `Paket ${bestPkg.days} Hari (Rp ${pkgPrice.toLocaleString("id-ID")})`;
+                           }
+                         } else {
+                           breakdownText = `${days} Hari x Rp ${pricePerDay.toLocaleString("id-ID")}/hari`;
+                         }
+                       } else {
+                         breakdownText = `${days} Hari x Rp ${pricePerDay.toLocaleString("id-ID")}/hari`;
+                       }
+                    } else if (item.item_type === 'accessory' && item.accessory) {
+                       const price = item.accessory.price || 0;
+                       itemPrice = price * days;
+                       breakdownText = `${days} Hari x Rp ${price.toLocaleString("id-ID")}/hari`;
+                    }
+
+                    return (
+                      <div key={item.id} className="flex flex-row justify-between text-xs text-default-500">
+                        <div className="flex flex-col">
+                          <p className="font-medium text-default-600 truncate max-w-[200px] md:max-w-[400px]">{itemName} ({days} Hari)</p>
+                          <p className="text-[10px] text-default-400 italic font-normal">{breakdownText}</p>
+                        </div>
+                        <p className="font-semibold text-default-700">Rp {itemPrice.toLocaleString("id-ID")}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -1225,9 +1335,27 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
             )}
 
             {accessoriesSelected.length > 0 && (
-              <div className="flex flex-row justify-between text-sm md:text-medium">
-                <p>Subtotal Aksesoris</p>
-                <p>Rp {getSubtotalAccessories().toLocaleString("id-ID")}</p>
+              <div className="flex flex-col">
+                <div className="flex flex-row justify-between text-sm md:text-medium font-medium">
+                  <p>Subtotal Aksesoris</p>
+                  <p>Rp {getSubtotalAccessories().toLocaleString("id-ID")}</p>
+                </div>
+                <div className="pl-3 mt-1 space-y-1.5 border-l-2 border-primary/20">
+                  {accessoriesSelected.map((acc) => {
+                    const days = getRentDays();
+                    const itemPrice = acc.price * days;
+                    const breakdownText = `${days} Hari x Rp ${acc.price.toLocaleString("id-ID")}/hari`;
+                    return (
+                      <div key={acc.id} className="flex flex-row justify-between text-xs text-default-500">
+                        <div className="flex flex-col">
+                          <p className="font-medium text-default-600 truncate max-w-[200px] md:max-w-[400px]">{acc.name} ({days} Hari)</p>
+                          <p className="text-[10px] text-default-400 italic font-normal">{breakdownText}</p>
+                        </div>
+                        <p className="font-semibold text-default-700">Rp {itemPrice.toLocaleString("id-ID")}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -1240,7 +1368,11 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
 
             <div className="flex flex-row justify-between text-sm md:text-medium">
               <p>Subtotal Pengiriman</p>
-              <p>Tunggu Konfirmasi Admin</p>
+              {shippingMethod === "pickup" ? (
+                <p className="text-success font-semibold text-xs md:text-sm">Ambil Sendiri (Rp 0)</p>
+              ) : (
+                <p className="text-xs md:text-sm text-default-500">Tunggu Konfirmasi Admin</p>
+              )}
             </div>
 
             {getSubtotalDiscount() > 0 && (
