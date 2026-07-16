@@ -303,18 +303,41 @@ const CatalogDetail = ({
                 )}
               </div>
             </div>
+            <div className="flex flex-row gap-4 items-start">
+              <div className="flex w-[35%] flex-row gap-1 items-center">
+                <MdDiscount />
+                <p>Tags</p>
+              </div>
+              <div className="w-[65%]">
+                {loadPage || loading ? (
+                  <Skeleton className="w-full h-4" />
+                ) : model?.tags && model.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {model.tags.map((tag: string, index: number) => (
+                      <Chip key={index} size="sm" variant="flat" color="primary">
+                        {tag}
+                      </Chip>
+                    ))}
+                  </div>
+                ) : (
+                  <p>-</p>
+                )}
+              </div>
+            </div>
             {!loading &&
               !(model?.bundle_catalog && model.bundle_catalog.length > 0) && (
                 <div className="flex gap-4 items-start">
                   <div className="w-[35%] flex flex-row gap-1 items-center">
-                    <MdDiscount />
-                    <p>Brand</p>
+                    <FaInfoCircle />
+                    <p>Kapasitas</p>
                   </div>
                   <div className="w-[65%]">
                     {loadPage || loading ? (
                       <Skeleton className="w-full h-4" />
+                    ) : model?.capacity && model?.capacity > 0 ? (
+                      <p>{model.capacity} {model.capacity_unit || "Orang"}</p>
                     ) : (
-                      <p>{model?.brand?.name}</p>
+                      <p>-</p>
                     )}
                   </div>
                 </div>

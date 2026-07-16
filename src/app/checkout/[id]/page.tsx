@@ -624,8 +624,9 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
     getSubtotalAdditionalDay() +
     getSubtotalAddons() +
     getSubtotalAccessories() +
-    getSubtotalAccessoriesAdditionalDay() -
-    getSubtotalDiscount();
+    getSubtotalAccessoriesAdditionalDay();
+    // Note: Discount/voucher feature removed
+    // - getSubtotalDiscount();
 
   // Handle checkout
   const handleCompleteCheckout = async () => {
@@ -660,7 +661,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
       const transactionData = {
         user_id: user.id,
         address_id: shippingMethod === "delivery" ? selectedAddressId : null,
-        vouchers_id: discount?.id || null,
         status: "pending",
         start_rent: dateRange.start_rent.toISOString(),
         end_rent: dateRange.end_rent.toISOString(),
@@ -736,16 +736,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
         }
       }
 
-      // Handle voucher/discount usage
-      if (discount && discount.id) {
-        await (supabase
-          .from('user_vouchers') as any)
-          .insert({
-            user_id: user.id,
-            vouchers_id: discount.id,
-            usage_count: 1,
-          });
-      }
+      // Note: Voucher/discount functionality removed - not implemented in schema
 
       // Remove items from cart (only for non-direct checkout items)
       const cartItemsToRemove = checkoutItems.filter(
@@ -1145,7 +1136,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
 
 
 
-      {/* Voucher Section */}
+      {/* Voucher Section - DISABLED (Feature not implemented in schema)
       <Section className="px-4 py-4 flex flex-col gap-3">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <IoTicket className="text-primary" />
@@ -1231,13 +1222,11 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
                   Batalkan
                 </Button>
               </div>
-              <p className="text-sm text-success font-medium">
-                Hemat: Rp {getSubtotalDiscount().toLocaleString("id-ID")}
-              </p>
             </div>
           )}
         </div>
       </Section>
+      */}
 
       {/* Payment Summary */}
       <Section className="px-4 py-4 flex flex-col gap-3 w-full">
@@ -1375,12 +1364,14 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ params }) => {
               )}
             </div>
 
+            {/* Voucher discount removed - feature not implemented
             {getSubtotalDiscount() > 0 && (
               <div className="flex flex-row justify-between text-sm md:text-medium">
                 <p>Voucher Diskon Digunakan</p>
                 <p>Rp -{getSubtotalDiscount().toLocaleString("id-ID")}</p>
               </div>
             )}
+            */}
 
             <Divider className="my-2 bg-default-100" />
 

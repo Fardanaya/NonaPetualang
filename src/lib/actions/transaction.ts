@@ -39,47 +39,6 @@ export const getTransactionById = async (id: string) => {
       if (addressData) data.address = addressData;
     }
 
-    // Fetch shipping data separately (without expedition join)
-    if (data.s_shipping && typeof data.s_shipping === 'string') {
-      const { data: sendShipping } = await supabase
-        .from('shipping')
-        .select('*')
-        .eq('id', data.s_shipping)
-        .single();
-      if (sendShipping) {
-        // Fetch expedition separately if exists
-        if (sendShipping.expedition && typeof sendShipping.expedition === 'string') {
-          const { data: expeditionData } = await supabase
-            .from('expedition')
-            .select('*')
-            .eq('id', sendShipping.expedition)
-            .single();
-          if (expeditionData) sendShipping.expedition = expeditionData;
-        }
-        data.s_shipping = sendShipping;
-      }
-    }
-
-    if (data.r_shipping && typeof data.r_shipping === 'string') {
-      const { data: returnShipping } = await supabase
-        .from('shipping')
-        .select('*')
-        .eq('id', data.r_shipping)
-        .single();
-      if (returnShipping) {
-        // Fetch expedition separately if exists
-        if (returnShipping.expedition && typeof returnShipping.expedition === 'string') {
-          const { data: expeditionData } = await supabase
-            .from('expedition')
-            .select('*')
-            .eq('id', returnShipping.expedition)
-            .single();
-          if (expeditionData) returnShipping.expedition = expeditionData;
-        }
-        data.r_shipping = returnShipping;
-      }
-    }
-
     // Fetch payment data separately
     if (data.deposit && typeof data.deposit === 'string') {
       const { data: deposit } = await supabase.from('payments').select('*').eq('id', data.deposit).single();
@@ -99,11 +58,6 @@ export const getTransactionById = async (id: string) => {
     if (data.sett_payment_id && typeof data.sett_payment_id === 'string') {
       const { data: settPayment } = await supabase.from('payments').select('*').eq('id', data.sett_payment_id).single();
       if (settPayment) data.sett_payment = settPayment;
-    }
-
-    if (data.vouchers_id && typeof data.vouchers_id === 'string') {
-      const { data: discount } = await supabase.from('vouchers').select('*').eq('id', data.vouchers_id).single();
-      if (discount) data.discount = discount;
     }
 
     // Fetch penalty data
