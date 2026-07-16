@@ -1,0 +1,56 @@
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
+
+:root {
+  --toastify-color-light: #ccc;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.content-wrapper {
+  @apply w-full max-w-[1280px] px-4 mx-auto;
+}
+
+/* Hide number input spinners */
+.no-spinners input[type="number"]::-webkit-inner-spin-button,
+.no-spinners input[type="number"]::-webkit-outer-spin-button,
+input[type="number"].no-spinners::-webkit-inner-spin-button,
+input[type="number"].no-spinners::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-spinners input[type="number"],
+input[type="number"].no-spinners {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+@layer base {
+  :root {
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+.leaflet-control-attribution.leaflet-control {
+  @apply hidden;
+}
+
+.writing-mode-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}

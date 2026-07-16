@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@config "../../../../tailwind.config.ts";
+
+.rbc-month-view {
+    @apply rounded md:rounded-lg;
+}
+
+.rbc-header {
+    @apply text-xs md:text-sm;
+}
+
+.rbc-month-header {
+    @apply bg-primary text-white rounded-t md:rounded-t-lg;
+}
+
+.rbc-toolbar-label {
+    @apply text-medium font-semibold;
+}
+
+.rbc-button-link {
+    @apply text-xs md:text-sm;
+}
+
+/* day */
+.rbc-off-range-bg {
+    @apply bg-default-200 md:rounded-br md:last:rounded-br-lg;
+}
+
+.rbc-today {
+    @apply bg-primary/15
+}
+
+/* event */
+.rbc-event, .rbc-event.rbc-selected {
+    @apply bg-transparent p-0;
+}
+
+.rbc-show-more {
+    @apply w-full text-primary hover:text-foreground;
+}

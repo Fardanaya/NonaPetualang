@@ -1,0 +1,2 @@
+-- Initial schema file
+-- Run `supabase db diff -f initial_schema` or `supabase gen types typescript --local` to get started

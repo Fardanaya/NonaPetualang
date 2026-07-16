@@ -1,0 +1,311 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/heroui";
+import { InputLabel } from "@/components/ui/Input";
+import { Progress } from "@heroui/react";
+import { LuImagePlus, LuImageUp, LuTrash2 } from "react-icons/lu";
+import { FaInfoCircle } from "react-icons/fa";
+import Image from "next/image";
+import { displayToast, validateFileSize } from "@/lib/utils";
+import { useCreateOrUpdateUser } from "@/hooks/react-query/user";
+import type { ProfileFormData } from "../page";
+
+interface RentProofStepProps {
+  formData: ProfileFormData;
+  updateFormData: (data: Partial<ProfileFormData>) => void;
+  userId?: string;
+}
+
+const RentProofStep = ({
+  formData,
+  updateFormData,
+  userId,
+}: RentProofStepProps) => {
+  const createOrUpdateUser = useCreateOrUpdateUser();
+  const [uploading, setUploading] = useState(false);
+  const [previewImages, setPreviewImages] = useState<
+    { url: string; file: File }[]
+  >([]);
+
+  const handleImageUploadWithProgress = async (
+    file: File,
+    id: string | undefined,
+    forType = "profile"
+  ): Promise<string | null> => {
+    if (!validateFileSize(file, 2)) return null;
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("files", file);
+      formDataUpload.append("type", forType);
+      if (id) formDataUpload.append("id", id);
+
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/tools/image");
+        xhr.withCredentials = true;
+        xhr.addEventListener("load", () => {
+          try {
+            const uploadData = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300) {
+              if (uploadData.success) {
+                resolve(uploadData.results[0].url);
+              } else {
+                reject(new Error(uploadData.error || "Image upload failed"));
+              }
+            } else {
+              reject(new Error(uploadData.error || "Image upload failed"));
+            }
+          } catch (error) {
+            reject(new Error("Failed to parse upload response"));
+          }
+        });
+        xhr.addEventListener("error", () => {
+          reject(new Error("Image upload failed"));
+        });
+        xhr.send(formDataUpload);
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      displayToast({
+        type: "danger",
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Image upload failed",
+      });
+      return null;
+    }
+  };
+
+  const uploadRentProofImages = async (files: File[]) => {
+    setUploading(true);
+    try {
+      const uploadPromises = files.map((file) =>
+        handleImageUploadWithProgress(file, userId, "profile")
+      );
+      const results = await Promise.allSettled(uploadPromises);
+      const uploadedUrls: string[] = [];
+
+      for (const res of results) {
+        if (res.status === "fulfilled" && res.value) {
+          uploadedUrls.push(res.value);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        const updated = [...formData.rent_proof, ...uploadedUrls];
+        updateFormData({ rent_proof: updated });
+
+        displayToast({
+          type: "success",
+          title: "Berhasil",
+          description: `${uploadedUrls.length} gambar berhasil diupload`,
+        });
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+      displayToast({
+        type: "danger",
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Image upload failed",
+      });
+    } finally {
+      setUploading(false);
+      // Clean up local previews
+      previewImages.forEach((p) => URL.revokeObjectURL(p.url));
+      setPreviewImages([]);
+    }
+  };
+
+  const handleRentProofChange = async (files: File[]) => {
+    // Create local preview first
+    const previews = files.map((file) => ({
+      url: URL.createObjectURL(file),
+      file,
+    }));
+    setPreviewImages((prev) => [...prev, ...previews]);
+    await uploadRentProofImages(files);
+  };
+
+  const handleDeleteRentProof = async (url: string) => {
+    try {
+      const publicId = url.split("/").pop()?.split(".")[0];
+      if (!publicId) return;
+
+      const response = await fetch("/api/tools/image", {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicId, type: "profile", id: userId }),
+      });
+
+      if (!response.ok) throw new Error("Failed to delete image");
+
+      const updated = formData.rent_proof.filter((img) => img !== url);
+      updateFormData({ rent_proof: updated });
+
+      displayToast({
+        type: "success",
+        title: "Berhasil",
+        description: "Gambar berhasil dihapus",
+      });
+    } catch (error) {
+      console.error("Failed to delete rent proof image:", error);
+      displayToast({
+        type: "danger",
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to delete",
+      });
+    }
+  };
+
+  const hasImages = formData.rent_proof.length > 0;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <span className="text-primary font-semibold">4</span>
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold">Bukti Pernah Sewa</h2>
+          <p className="text-sm text-default-500">
+            Opsional - Dapat dilewati dan diupdate nanti
+          </p>
+        </div>
+      </div>
+
+      {/* Optional Badge */}
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 text-blue-600">
+        <FaInfoCircle />
+        <span className="text-sm font-medium">
+          Step ini opsional. Anda dapat melewati dan mengupload bukti sewa nanti
+          di halaman profil.
+        </span>
+      </div>
+
+      {/* Upload Section */}
+      <div className="flex flex-col gap-4 p-4 border border-primary/30 rounded-lg bg-default-50">
+        <InputLabel
+          label="Screenshot Bukti Sewa"
+          desc="Upload screenshot chat pengembalian kostum dari tempat sewa lain (maksimal 10 gambar)"
+        />
+
+        {/* Uploaded Images Grid */}
+        {(hasImages || previewImages.length > 0) && (
+          <div className="grid grid-cols-2 gap-4">
+            {/* Existing uploaded images */}
+            {formData.rent_proof.map((url, index) => (
+              <div
+                key={`uploaded-${index}`}
+                className="relative h-48 w-full rounded-lg overflow-hidden group"
+              >
+                <Image
+                  src={url}
+                  alt={`Bukti sewa ${index + 1}`}
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Button
+                    isIconOnly
+                    color="danger"
+                    size="sm"
+                    onPress={() => handleDeleteRentProof(url)}
+                  >
+                    <LuTrash2 />
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            {/* Local preview images (uploading) */}
+            {previewImages.map((preview, index) => (
+              <div
+                key={`preview-${index}`}
+                className="relative h-48 w-full rounded-lg overflow-hidden"
+              >
+                <Image
+                  src={preview.url}
+                  alt={`Preview ${index + 1}`}
+                  fill
+                  className="object-cover opacity-50"
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Progress
+                    color="primary"
+                    radius="sm"
+                    size="sm"
+                    isIndeterminate
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Upload Button/Area */}
+        {formData.rent_proof.length < 10 && (
+          <div className="relative flex justify-center items-center h-40 w-full rounded-lg bg-default-100 hover:bg-primary/5 transition border-dashed border-2 border-primary/50 cursor-pointer">
+            <div className="absolute flex flex-col justify-center items-center gap-2 w-full h-full pointer-events-none">
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <LuImageUp className="text-primary" size={40} />
+                  <Progress
+                    color="primary"
+                    radius="sm"
+                    size="sm"
+                    isIndeterminate
+                    className="w-1/2"
+                  />
+                  <p className="text-xs text-default-500">Uploading...</p>
+                </div>
+              ) : (
+                <>
+                  <LuImagePlus className="text-primary/60" size={40} />
+                  <p className="text-sm text-default-500">
+                    {hasImages
+                      ? `Upload ${10 - formData.rent_proof.length} gambar lagi`
+                      : "Klik untuk upload (maks 10 gambar)"}
+                  </p>
+                </>
+              )}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              disabled={uploading}
+              onChange={(e) => {
+                if (e.target.files) {
+                  const remaining = 10 - formData.rent_proof.length;
+                  const files = Array.from(e.target.files).slice(0, remaining);
+                  handleRentProofChange(files);
+                }
+              }}
+              className="h-full w-full opacity-0 cursor-pointer"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Status */}
+      <div className="bg-default-50 rounded-lg p-4">
+        <p className="text-sm font-medium mb-2">Status:</p>
+        <ul className="text-sm">
+          <li className={hasImages ? "text-success" : "text-default-400"}>
+            {hasImages ? "✓" : "○"} {formData.rent_proof.length}/10 bukti sewa
+            diupload
+          </li>
+        </ul>
+        <p className="text-xs text-default-400 mt-2">
+          * Step ini opsional dan dapat dilewati
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default RentProofStep;

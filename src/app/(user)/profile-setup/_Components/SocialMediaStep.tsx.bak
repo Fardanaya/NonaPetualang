@@ -1,0 +1,264 @@
+"use client";
+
+import { useState, useCallback, useEffect } from "react";
+import { Button, Input } from "@/components/ui/heroui";
+import { InputLabel } from "@/components/ui/Input";
+import { Avatar } from "@heroui/react";
+import { FaInstagram, FaSearch, FaCheckCircle, FaEyeSlash } from "react-icons/fa";
+import { FaLink } from "react-icons/fa6";
+import { displayToast } from "@/lib/utils";
+import { fetchInstagram } from "@/lib/fetch";
+import { useCreateOrUpdateUser } from "@/hooks/react-query/user";
+import type { ProfileFormData } from "../page";
+
+interface SocialMediaStepProps {
+  formData: ProfileFormData;
+  updateFormData: (data: Partial<ProfileFormData>) => void;
+  userId?: string;
+}
+
+const SocialMediaStep = ({
+  formData,
+  updateFormData,
+  userId,
+}: SocialMediaStepProps) => {
+  const createOrUpdateUser = useCreateOrUpdateUser();
+  const [instagramInput, setInstagramInput] = useState("");
+  const [instagramData, setInstagramData] = useState<any>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const fetchInstagramData = useCallback(async (username: string) => {
+    if (!username.trim()) {
+      displayToast({
+        type: "warning",
+        title: "Perhatian",
+        description: "Masukkan username Instagram",
+      });
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const res = await fetchInstagram(username);
+      const data = (res as any)?.data ?? res;
+      setInstagramData(data);
+    } catch (error) {
+      console.error("Failed to fetch Instagram data:", error);
+      displayToast({
+        type: "danger",
+        title: "Error",
+        description: "Gagal mencari akun Instagram",
+      });
+      setInstagramData(null);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Fetch existing Instagram data if user has it
+  useEffect(() => {
+    if (formData.instagram && !instagramData) {
+      fetchInstagramData(formData.instagram);
+    }
+  }, [formData.instagram, instagramData, fetchInstagramData]);
+
+  const handleConnect = async () => {
+    if (!instagramData?.id) {
+      displayToast({
+        type: "warning",
+        title: "Perhatian",
+        description: "Pilih akun Instagram yang valid",
+      });
+      return;
+    }
+
+    setIsConnecting(true);
+    try {
+      const instagramId = instagramData.id;
+
+      // Call API first to validate uniqueness
+      await createOrUpdateUser.mutateAsync({
+        id: userId,
+        instagram: instagramId,
+      });
+
+      // Only update local state after successful API call
+      updateFormData({ instagram: instagramId });
+
+      displayToast({
+        type: "success",
+        title: "Berhasil",
+        description: "Akun Instagram berhasil terhubung",
+      });
+    } catch (error) {
+      console.error("Failed to connect Instagram:", error);
+      displayToast({
+        type: "danger",
+        title: "Error",
+        description: "Gagal menghubungkan akun Instagram",
+      });
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const isConnected = formData.instagram !== "";
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <span className="text-primary font-semibold">3</span>
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold">Social Media</h2>
+          <p className="text-sm text-default-500">
+            Hubungkan akun Instagram Anda
+          </p>
+        </div>
+      </div>
+
+      {/* Connected Status */}
+      {isConnected && instagramData && (
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-success/10 border border-success/30">
+          <Avatar
+            src={instagramData?.profile_pic_url_hd_cached || "/placeholder.jpeg"}
+            alt="Instagram profile"
+            className="w-14 h-14"
+          />
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">@{instagramData?.username}</span>
+              <FaCheckCircle className="text-success" />
+            </div>
+            <div className="flex items-center gap-3 text-xs text-default-500 mt-1">
+              <span>
+                <strong className="text-primary">{instagramData?.media_count || 0}</strong> Post
+              </span>
+              <span>
+                <strong className="text-primary">{instagramData?.follower_count || 0}</strong> Followers
+              </span>
+              <span>
+                <strong className="text-primary">{instagramData?.following_count || 0}</strong> Following
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search Section */}
+      {!isConnected && (
+        <div className="flex flex-col gap-4 p-4 border border-primary/30 rounded-lg bg-default-50">
+          <InputLabel
+            label="Cari akun Instagram"
+            desc="Masukkan username Instagram Anda untuk verifikasi"
+          />
+
+          <div className="flex items-end gap-2">
+            <Input
+              isClearable
+              label="Username"
+              placeholder="username_instagram"
+              startContent={<FaInstagram className="text-pink-500" />}
+              value={instagramInput}
+              onValueChange={setInstagramInput}
+              onClear={() => {
+                setInstagramInput("");
+                setInstagramData(null);
+              }}
+            />
+            <Button
+              color="primary"
+              isLoading={isSearching}
+              onPress={() => fetchInstagramData(instagramInput)}
+            >
+              <FaSearch />
+            </Button>
+          </div>
+
+          {/* Preview Card */}
+          {instagramData && (
+            <div className="relative border border-primary/30 rounded-lg overflow-hidden mt-2">
+              {instagramData?.isPrivate && (
+                <div className="absolute w-full h-full bg-default-900/90 z-10 flex items-center justify-center gap-2">
+                  <FaEyeSlash className="text-primary" size={25} />
+                  <p className="text-white">Akun Private</p>
+                </div>
+              )}
+              <div className="flex justify-between items-center px-4 py-4">
+                <div className="flex items-center gap-4">
+                  <Avatar
+                    src={
+                      instagramData?.profile_pic_url_hd_cached ||
+                      "/placeholder.jpeg"
+                    }
+                    alt="user"
+                    className="w-14 h-14"
+                  />
+                  <div className="flex flex-col">
+                    <p className="font-semibold text-lg">
+                      @{instagramData?.username || "Username"}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-default-500">
+                      <span>
+                        <strong className="text-primary">
+                          {instagramData?.media_count || 0}
+                        </strong>{" "}
+                        Post
+                      </span>
+                      <span>
+                        <strong className="text-primary">
+                          {instagramData?.follower_count || 0}
+                        </strong>{" "}
+                        Followers
+                      </span>
+                      <span>
+                        <strong className="text-primary">
+                          {instagramData?.following_count || 0}
+                        </strong>{" "}
+                        Following
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  color="primary"
+                  startContent={<FaLink />}
+                  isLoading={isConnecting}
+                  onPress={handleConnect}
+                  className="font-medium"
+                >
+                  Hubungkan
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Info Box */}
+      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+        <p className="text-sm text-default-600">
+          <strong className="text-primary">Mengapa perlu Instagram?</strong>
+          <br />
+          Kami memverifikasi identitas penyewa melalui akun Instagram untuk
+          keamanan dan kepercayaan dalam transaksi sewa. Pastikan akun Anda
+          tidak dalam mode private.
+        </p>
+      </div>
+
+      {/* Checklist */}
+      <div className="bg-default-50 rounded-lg p-4">
+        <p className="text-sm font-medium mb-2">Status:</p>
+        <ul className="text-sm">
+          <li className={isConnected ? "text-success" : "text-default-400"}>
+            {isConnected ? "✓" : "○"} Instagram terhubung
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+export default SocialMediaStep;
